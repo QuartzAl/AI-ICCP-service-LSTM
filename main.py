@@ -13,10 +13,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # InfluxDB Client supporting Flux
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
-
+from dotenv import load_dotenv
 # ==========================================
 # 1. CONFIGURATION & CORE ENVIRONMENT
 # ==========================================
+load_dotenv()
 INFLUX_URL = os.getenv("INFLUXDB_URL")
 INFLUX_TOKEN = os.getenv("INFLUXDB_TOKEN")
 INFLUX_ORG = "petra"
