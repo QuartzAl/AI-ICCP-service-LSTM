@@ -106,7 +106,7 @@ def generate_bootstrap_query(range_start: str, window_period: str) -> str:
     return f'''
     from(bucket: "{INFLUX_BUCKET}")
       |> range(start: {range_start})
-      |> filter(fn: (r) => r["device_id"] == "{DEVICE_ID}")
+      |> filter(fn: (r) => r["device_id"] == "{DEVICE_ID} and not exists r.type")
       |> aggregateWindow(every: {window_period}, fn: mean, createEmpty: true)
       |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> keep(columns: {flux_columns})
