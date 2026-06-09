@@ -30,12 +30,12 @@ write_api = client.write_api(write_options=SYNCHRONOUS)
 
 # Features array mapping
 FEATURES = ["bus_voltage_V", "current_mA", "electrode_V", "soil_humidity_V", "target_current_mA"]
-TARGET_INDEX = FEATURES.index("electrode_V") 
+TARGET_INDEX = FEATURES.index("electrode_V")
 
 # Specific memory cache sequence parameters (heterogeneous lookbacks)
-LOOKBACK_30S = 45 
+LOOKBACK_30S = 45
 LOOKBACK_2M  = 45
-LOOKBACK_10M = 90 
+LOOKBACK_10M = 90
 
 CACHE_30S = deque(maxlen=LOOKBACK_30S)
 CACHE_2M  = deque(maxlen=LOOKBACK_2M)
@@ -91,7 +91,7 @@ def execute_flux_query(flux_script: str) -> pd.DataFrame:
     """
     result = query_api.query_data_frame(flux_script)
     if isinstance(result, list):
-        if not result: 
+        if not result:
             return pd.DataFrame()
         df = pd.concat(result)
     else:
@@ -122,12 +122,12 @@ def process_and_align_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df.set_index('_time', inplace=True)
     df.sort_index(inplace=True)
     df = df.ffill().bfill()
-    
+
     # Guarantee all features exist in the table columns
     for col in FEATURES:
         if col not in df.columns:
             df[col] = np.nan
-            
+
     df_aligned = df[FEATURES].ffill().bfill().fillna(0.0)
     return df_aligned
 
@@ -138,7 +138,7 @@ def bootstrap_all_caches():
     """
     global CACHE_30S, CACHE_2M, CACHE_10M
     print("🚀 Priming all memory caches via historical Flux queries...")
-    
+
     # 1. Bootstrap 30-Second Cache (Requires past ~30 minutes for 45 steps of 30s)
     df_30s = execute_flux_query(generate_bootstrap_query("-30m", "30s"))
     if not df_30s.empty:
@@ -146,7 +146,7 @@ def bootstrap_all_caches():
         CACHE_30S.clear()
         for row in df_aligned_30s.values:
             CACHE_30S.append(row)
-            
+
     # 2. Bootstrap 2-Minute Cache (Requires past ~100 minutes for 45 steps of 2m)
     df_2m = execute_flux_query(generate_bootstrap_query("-100m", "2m"))
     if not df_2m.empty:
@@ -154,7 +154,7 @@ def bootstrap_all_caches():
         CACHE_2M.clear()
         for row in df_aligned_2m.values:
             CACHE_2M.append(row)
-            
+
     # 3. Bootstrap 10-Minute Cache (Requires past ~18 hours for 90 steps of 10m)
     df_10m = execute_flux_query(generate_bootstrap_query("-18h", "10m"))
     if not df_10m.empty:
@@ -168,18 +168,18 @@ def bootstrap_all_caches():
 
 def run_keras_inference(model, scaler, cache_deque):
     """
-    Transforms cache history into standard tensors, performs Keras model 
+    Transforms cache history into standard tensors, performs Keras model
     prediction, and inverse-scales the output back to actual physical metrics.
     """
     raw_window = np.array(cache_deque)
     scaled_window = scaler.transform(raw_window)
-    
+
     input_tensor = np.expand_dims(scaled_window, axis=0)
     scaled_prediction = model.predict(input_tensor, verbose=0)[0][0]
-    
+
     dummy_row = np.zeros((1, len(FEATURES)))
     dummy_row[0, TARGET_INDEX] = scaled_prediction
-    
+
     inverse_row = scaler.inverse_transform(dummy_row)
     return inverse_row[0, TARGET_INDEX]
 
@@ -194,9 +194,9 @@ def execute_pipeline_tick():
     """
     global CACHE_30S, CACHE_2M, CACHE_10M, tick_count
     tick_count += 1
-    
+
     print(f"\n⏱️ Tick {tick_count} executed at: {datetime.now().strftime('%H:%M:%S')}")
-    
+
     # 1. Pull ONLY the single newest 30-second window
     query_30s = f'''
     from(bucket: "{INFLUX_BUCKET}")
@@ -207,20 +207,20 @@ def execute_pipeline_tick():
       |> keep(columns: {flux_columns})
       |> tail(n: 1)
     '''
-    
+
     try:
         df = execute_flux_query(query_30s)
         if df.empty:
             print("⚠ Flux returned no new point for this tick cycle.")
             return
-            
-        # Ensure structural shape integrity 
+
+        # Ensure structural shape integrity
         for col in FEATURES:
             if col not in df.columns:
                 df[col] = np.nan
 
         df_aligned = df[FEATURES]
-        
+
         # Fallback to last known cache values if NaN values exist
         if df_aligned.isnull().values.any() and len(CACHE_30S) > 0:
             last_historical_row = CACHE_30S[-1]
@@ -230,19 +230,20 @@ def execute_pipeline_tick():
 
         # Append the new 30s feature values to cache
         CACHE_30S.append(latest_features)
-        
+
         # --- [MODEL 1: 30s Aggregation -> 7m Forecast] ---
         if len(CACHE_30S) >= LOOKBACK_30S:
             pred_30s = run_keras_inference(MODEL_30S, SCALER_30S, CACHE_30S)
             future_time_30s = datetime.now(timezone.utc) + timedelta(minutes=7)
-            
+
             p_30s = Point("sensor_measurement") \
+                .tag("device_id", DEVICE_ID) \
                 .tag("type", "forecast") \
                 .tag("horizon", "7m") \
                 .tag("model", "keras_30s_service") \
                 .field("electrode_V", float(pred_30s)) \
                 .time(future_time_30s)
-                
+
             write_api.write(bucket=INFLUX_BUCKET, record=p_30s)
             print(f"🔮 [7m Horizon] Predicted electrode_V: {pred_30s:.4f}V | Target Timestamp: {future_time_30s.strftime('%H:%M:%S')}")
         else:
@@ -255,18 +256,19 @@ def execute_pipeline_tick():
             recent_30s_points = list(CACHE_30S)[-4:]
             two_min_mean = np.mean(recent_30s_points, axis=0)
             CACHE_2M.append(two_min_mean)
-            
+
             if len(CACHE_2M) >= LOOKBACK_2M:
                 pred_2m = run_keras_inference(MODEL_2M, SCALER_2M, CACHE_2M)
                 future_time_2m = datetime.now(timezone.utc) + timedelta(minutes=30)
-                
+
                 p_2m = Point("sensor_measurement") \
+                    .tag("device_id", DEVICE_ID) \
                     .tag("type", "forecast") \
                     .tag("horizon", "30m") \
                     .tag("model", "keras_2m_service") \
                     .field("electrode_V", float(pred_2m)) \
                     .time(future_time_2m)
-                    
+
                 write_api.write(bucket=INFLUX_BUCKET, record=p_2m)
                 print(f"🔮 [30m Horizon] Predicted electrode_V: {pred_2m:.4f}V | Target Timestamp: {future_time_2m.strftime('%H:%M:%S')}")
             else:
@@ -279,25 +281,26 @@ def execute_pipeline_tick():
             recent_2m_points = list(CACHE_2M)[-5:]
             ten_min_mean = np.mean(recent_2m_points, axis=0)
             CACHE_10M.append(ten_min_mean)
-            
+
             if len(CACHE_10M) >= LOOKBACK_10M:
                 pred_10m = run_keras_inference(MODEL_10M, SCALER_10M, CACHE_10M)
                 future_time_10m = datetime.now(timezone.utc) + timedelta(hours=12)
-                
+
                 p_10m = Point("sensor_measurement") \
+                    .tag("device_id", DEVICE_ID) \
                     .tag("type", "forecast") \
                     .tag("horizon", "12h") \
                     .tag("model", "keras_10m_service") \
                     .field("electrode_V", float(pred_10m)) \
                     .time(future_time_10m)
-                    
+
                 write_api.write(bucket=INFLUX_BUCKET, record=p_10m)
                 print(f"🔮 [12h Horizon] Predicted electrode_V: {pred_10m:.4f}V | Target Timestamp: {future_time_10m.strftime('%H:%M:%S')}")
             else:
                 print(f"ℹ CACHE_10M filling: {len(CACHE_10M)}/{LOOKBACK_10M}")
-                
+
             # Keep ticker count bound to prevent integer overflow over weeks of runtime (divisible by 4 and 20)
-            if tick_count >= 2400: 
+            if tick_count >= 2400:
                 tick_count = 0
 
     except Exception as e:
@@ -309,12 +312,12 @@ def execute_pipeline_tick():
 async def main():
     # Warm up all sequence caches from database history on launch
     bootstrap_all_caches()
-    
+
     # Initialize task scheduler with an asynchronous execution loop
     scheduler = AsyncIOScheduler()
     scheduler.add_job(execute_pipeline_tick, 'interval', seconds=30)
     scheduler.start()
-    
+
     print("🟢 Unified ML Time Series Service Active. Running orchestration loop every 30 seconds...")
 
     try:
