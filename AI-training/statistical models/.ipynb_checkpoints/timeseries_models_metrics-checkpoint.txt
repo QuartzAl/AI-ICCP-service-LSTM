@@ -1,0 +1,37 @@
+=========================================================
+ TIME SERIES MODELS VALIDATION REPORT (2026-06-04 10:56:22)
+=========================================================
+
+--- Model: ETS ---
+Parameters:
+  - smoothing_level: 0.3215666408068951
+  - smoothing_trend: 0.0
+Metrics:
+  * MAE    (Primary) : 0.26983 V
+  * cvRMSE           : 15.296 %
+  * NMBE             : -5.138 %
+  * MDA              : 48.36 %
+  * R2 Score         : -0.2752
+
+--- Model: VAR ---
+Parameters:
+  - optimal_lag_order_aic: 15
+Metrics:
+  * MAE    (Primary) : 0.27578 V
+  * cvRMSE           : 16.233 %
+  * NMBE             : -7.061 %
+  * MDA              : 48.36 %
+  * R2 Score         : -0.4362
+
+--- Model: STS ---
+Parameters:
+  - sigma2.measurement: 0.0003337780670952039
+  - sigma2.level: 5.109447258799517e-05
+  - sigma2.trend: 2.4115406087528844e-11
+Metrics:
+  * MAE    (Primary) : 0.26575 V
+  * cvRMSE           : 14.994 %
+  * NMBE             : -4.620 %
+  * MDA              : 48.42 %
+  * R2 Score         : -0.2253
+

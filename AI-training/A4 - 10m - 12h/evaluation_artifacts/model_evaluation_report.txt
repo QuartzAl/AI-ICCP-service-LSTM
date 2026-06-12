@@ -1,0 +1,34 @@
+========================================================================
+           ICCP TELEMETRY LSTM MODEL EVALUATION REPORT
+           Generated on: 2026-06-06 18:13:12
+========================================================================
+
+--- TELEMETRY DATA STRUCTURE CONFIGURATION ---
+Device ID Selected           : 001
+Input Lookback Sequence Steps: 90 steps (90 mins context)
+Target Future Prediction Step: 72 steps (30 mins forward)
+Features Modeled             : bus_voltage_V, current_mA, electrode_V, soil_humidity_V, future_target_current_mA
+Train/Test Partition Split   : 80.0% Train / 20% Test
+
+--- TRAINED MODEL HYPERPARAMETERS ---
+LSTM Structural Layer 1 Units : 288
+LSTM Structural Layer 2 Units : 256
+Dense Connectivity Layer Units: 96
+Dropout Regularization Rate   : 0.1500
+Optimized Optimizer Base LR   : 0.000200
+Batch Execution Training Size : 32
+
+--- DETAILED VALIDATION METRICS (OUT-OF-SAMPLE) ---
+Root Mean Squared Error (RMSE)      : 0.370859 V
+Mean Absolute Error (MAE)            : 0.250509 V
+Coefficient of Variation of RMSE (cvRMSE): 17.7248%
+Mean Directional Accuracy (MDA)      : 46.5950%
+Mean Absolute Percentage Error (MAPE): 13.5629%
+Max Scale Outlier Error (Max Error)  : 0.958810 V
+Coefficient of Determination (R²)    : -0.941140
+
+--- FILE EXPORT ARTIFACT PATHS ---
+Keras Saved Model Directory          : evaluation_artifacts/iccp_lstm_model.keras
+MinMaxScaler Joblib Path             : evaluation_artifacts/iccp_scaler.joblib
+Raw Predictions Output CSV           : evaluation_artifacts/evaluation_predictions.csv
+========================================================================

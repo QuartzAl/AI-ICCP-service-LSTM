@@ -1,0 +1,20 @@
+==================================================
+  XGBOOST OPTIMIZATION & METRICS (2026-06-05 14:56:08)
+==================================================
+
+[BEST HYPERPARAMETERS]
+subsample: 0.7
+n_estimators: 500
+min_child_weight: 5
+max_depth: 5
+learning_rate: 0.01
+colsample_bytree: 0.8
+
+[VALIDATION METRICS]
+MAE (Main Metric) : 0.010121 V
+RMSE              : 0.062209 V
+cvRMSE            : 2.9033 %
+NMBE              : -0.0361 %
+MDA               : 0.6099
+R2 Score          : 0.950272
+==================================================

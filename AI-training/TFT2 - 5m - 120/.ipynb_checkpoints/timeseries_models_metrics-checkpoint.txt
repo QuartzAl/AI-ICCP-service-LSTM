@@ -1,0 +1,23 @@
+=========================================================
+ TIME SERIES MODELS VALIDATION REPORT (2026-06-06 18:43:46)
+=========================================================
+
+--- Model: TFT (Evaluated on Absolute Values) ---
+Parameters:
+  - input_chunk_length: 90
+  - output_chunk_length: 5
+  - prediction_gap: 120
+  - hidden_size: 16
+  - lstm_layers: 1
+  - num_attention_heads: 2
+  - dropout: 0.05513979556301658
+  - batch_size: 64
+  - lr: 0.009470803733179737
+  - epochs_limit: 150
+Metrics:
+  * MAE    (Primary) : 0.02626 V
+  * cvRMSE           : 5.346 %
+  * NMBE             : -0.073 %
+  * MDA              : 53.56 %
+  * R2 Score         : 0.7938
+

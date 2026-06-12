@@ -1,0 +1,24 @@
+=========================================================
+ TIME SERIES MODELS VALIDATION REPORT (2026-06-07 20:56:15)
+=========================================================
+
+--- Model: TFT (Evaluated on Gap-Extracted Absolute Values) ---
+Parameters:
+  - input_chunk_length: 120
+  - target_chunk_size: 30
+  - prediction_gap: 288
+  - total_tft_output_size: 318
+  - hidden_size: 32
+  - lstm_layers: 3
+  - num_attention_heads: 4
+  - dropout: 0.1432268473083087
+  - batch_size: 64
+  - lr: 0.003498196113065954
+  - epochs_limit: 150
+Metrics:
+  * MAE    (Primary) : 0.26725 V
+  * cvRMSE           : 17.612 %
+  * NMBE             : 0.446 %
+  * MDA              : 47.88 %
+  * R2 Score         : -2.4522
+
